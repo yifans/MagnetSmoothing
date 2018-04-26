@@ -16,7 +16,7 @@ from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-from numpy import arange, sin, pi
+from numpy import arange, sin, pi, cos
 
 class MyMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
@@ -25,7 +25,7 @@ class MyMplCanvas(FigureCanvas):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
 
-        self.compute_initial_figure()
+        #self.compute_initial_figure()
 
         FigureCanvas.__init__(self, fig)
         self.setParent(parent)
@@ -35,10 +35,29 @@ class MyMplCanvas(FigureCanvas):
                                    QtWidgets.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
         
-class MyStaticMplCanvas(MyMplCanvas):
+class PlotAll(MyMplCanvas):
     """Simple canvas with a sine plot."""
 
     def compute_initial_figure(self):
         t = arange(0.0, 3.0, 0.01)
         s = sin(2*pi*t)
         self.axes.plot(t, s)
+    
+    def plot(self, x, y, start_point = 0):
+        self.axes.cla()
+        self.axes.plot(x, y, 'r')
+        self.draw()
+    
+    def plot_compare(self, data_before, data_after):
+        pass
+
+class PlotSection(MyMplCanvas):
+    """Simple canvas with a sine plot."""
+
+    def compute_initial_figure(self):
+        t = arange(0.0, 3.0, 0.01)
+        s = cos(2*pi*t)
+        self.axes.plot(t, s)
+        
+    def plot(self, data_before, data_after):
+        pass
