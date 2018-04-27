@@ -1,12 +1,13 @@
 import numpy as np
 
-class Fitting:  
+class fitting:  
     
     def __init__(self,X,Y):  
         self.x = np.array(X)  
         self.y = np.array(Y)  
         
     def fitting(self,n):  
+        #print(self.x, self.y,n)
         self.z = np.polyfit(self.x,self.y,n)  
         self.p = np.poly1d(self.z)  
         self.val = np.polyval(self.p,self.x)

@@ -14,6 +14,8 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication,QWidget,QVBoxLayout,
 from PyQt5.QtCore import pyqtSignal,QObject
 from myMplCanvas import PlotAll, PlotSection
 import numpy as np
+from algorithm import smooth_in_section
+import copy
 
 class Communicate(QObject):
     plot_raw_signal = pyqtSignal()
@@ -31,11 +33,20 @@ class MainWindow(QMainWindow):
         # smooth后的数据
         self.smooth_data_x = []
         self.smooth_data_y = []
+        # 一个section内smooth前后的数据
+        self.smooth_section_xx = []
+        self.smooth_section_before_x = []
+        self.smooth_section_before_y = []
+        self.smooth_section_after_x = []
+        self.smooth_section_after_y = []
         # smooth的配置信息
         self.section_confg = 0
         self.step_config = 0
         self.order_config = 0
         self.deviation_config = 0
+        #self.step_start = 0
+        self.bound_left = 0
+        self.bound_right = 0
 
         self.initUI()
         self.setMenuBar()
@@ -44,7 +55,7 @@ class MainWindow(QMainWindow):
 
     def initUI(self):
         # 设置窗口的位置和大小
-        self.setGeometry(0, 0, 1000, 700)
+        self.setGeometry(0, 0, 1200, 700)
 
         # 设置窗口的标题
         self.setWindowTitle('Magnets Smoothing')
@@ -139,7 +150,7 @@ class MainWindow(QMainWindow):
         self.step_config = int(self.step.currentText())
         self.deviation_config = int(self.deviation.currentText())
         self.order_config = int(self.order.currentText())
-        print(self.section_config,self.step_config,self.deviation_config,self.order_config)
+        #print(self.section_config,self.step_config,self.deviation_config,self.order_config)
         
     def init_slot(self):
         #
@@ -170,11 +181,15 @@ class MainWindow(QMainWindow):
             self.locations = raw_data[:,0]
             self.raw_data_x = raw_data[:,1]
             self.raw_data_y = raw_data[:,2]
+            self.smooth_data_x = copy.deepcopy(self.raw_data_x)
+            self.smooth_data_y = copy.deepcopy(self.raw_data_y)
+            self.bound_left = 0
+            self.bound_right = 0
             self.c.plot_raw_signal.emit()
         # print(self.raw_data)
     
     def save_file(self):
-        if self.smooth_data == []:
+        if self.locations == []:
             QMessageBox.about(self, 'error', 'Please smooth the data')
             return
         fname, ok2 = QFileDialog.getSaveFileName(self,  
@@ -182,24 +197,74 @@ class MainWindow(QMainWindow):
                                     ".",  
                                     "csv file (*.csv)")
         if fname:
-            np.savetxt(fname, self.smooth_data, delimiter=',')
+            smooth_data = [self.locations, self.smooth_data_x, self.smooth_data_y]
+            np.savetxt(fname, smooth_data, delimiter=',')
     
     def plot_raw(self):
         self.plot_all_x.plot(self.locations, self.raw_data_x)
         self.plot_all_y.plot(self.locations, self.raw_data_y)
-        print('plot raw')
     
     def plot_smooth(self):
-        print('plot smooth')
+        self.plot_all_x.plot(self.locations, self.smooth_data_x)
+        self.plot_all_y.plot(self.locations, self.smooth_data_y)
+        self.plot_all_x.add_bound(self.locations, self.bound_left, self.bound_right)
+        self.plot_all_y.add_bound(self.locations, self.bound_left, self.bound_right)
+        self.plot_section_x.plot(self.smooth_section_xx, 
+                                 self.smooth_section_before_x, 
+                                 self.smooth_section_after_x)
+        self.plot_section_y.plot(self.smooth_section_xx, 
+                                 self.smooth_section_before_y, 
+                                 self.smooth_section_after_y)
     
     def plot_end(self):
-        print('plot end')
+        self.plot_all_x.plot_compare(self.locations, self.raw_data_x, self.smooth_data_x)
+        self.plot_all_y.plot_compare(self.locations, self.raw_data_y, self.smooth_data_y)
+        self.plot_section_x.clear()
+        self.plot_section_y.clear()
+        # print(self.locations, self.raw_data_y, self.smooth_data_y)
         
     def smooth_action(self):
-        print('smooth action')
+        if self.locations == []:
+            QMessageBox.about(self, 'error', 'Please open the magnet data file')
+            return
+        while self.bound_left < len(self.locations):
+            self.process_smooth_in_section()
+        QMessageBox.about(self, 'done', 'Smooth is over')
+        self.c.plot_end_signal.emit()
 
     def step_smooth_action(self):
-        print('smooth step action')
+        if self.locations == []:
+            QMessageBox.about(self, 'error', 'Please open the magnet data file')
+            return
+        self.process_smooth_in_section()
+        
+    def process_smooth_in_section(self):
+        self.bound_right = self.bound_left + self.section_config
+        if self.bound_right >= len(self.locations):
+            self.bound_right = len(self.locations) - 1
+        b1 = self.bound_left
+        b2 = self.bound_right
+        #print('b1', b1, 'b2', b2)
+        print('left and right', self.bound_left, self.bound_right)
+        if self.bound_left < len(self.locations):
+            self.smooth_section_xx = self.locations[b1:b2]
+            self.smooth_section_before_x = copy.deepcopy(self.smooth_data_x[b1:b2])
+            self.smooth_section_before_y = copy.deepcopy(self.smooth_data_y[b1:b2])
+            smooth_in_section(self.locations[b1:b2], self.smooth_data_x[b1:b2], 
+                              self.deviation_config, self.order_config)
+            smooth_in_section(self.locations[b1:b2], self.smooth_data_y[b1:b2],
+                              self.deviation_config, self.order_config)
+            self.smooth_section_after_x = copy.deepcopy(self.smooth_data_x[b1:b2])
+            self.smooth_section_after_y = copy.deepcopy(self.smooth_data_y[b1:b2])      
+            self.c.plot_smooth_signal.emit()
+            # bound 前进
+            self.bound_left += self.step_config
+        else:
+            self.c.plot_end_signal.emit()
+            QMessageBox.about(self, 'done', 'Smooth is over')
+        
+
+        
 if __name__ == '__main__':
     # 创建应用程序和对象
     app = QApplication(sys.argv)

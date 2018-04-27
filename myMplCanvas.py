@@ -17,6 +17,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from numpy import arange, sin, pi, cos
+import random
 
 class MyMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
@@ -29,6 +30,8 @@ class MyMplCanvas(FigureCanvas):
 
         FigureCanvas.__init__(self, fig)
         self.setParent(parent)
+        self.axes.set_xlabel('location mm')
+        self.axes.set_ylabel('position mm')
 
         FigureCanvas.setSizePolicy(self,
                                    QtWidgets.QSizePolicy.Expanding,
@@ -36,28 +39,40 @@ class MyMplCanvas(FigureCanvas):
         FigureCanvas.updateGeometry(self)
         
 class PlotAll(MyMplCanvas):
-    """Simple canvas with a sine plot."""
-
-    def compute_initial_figure(self):
-        t = arange(0.0, 3.0, 0.01)
-        s = sin(2*pi*t)
-        self.axes.plot(t, s)
     
-    def plot(self, x, y, start_point = 0):
+    def plot(self, xx, y):
         self.axes.cla()
-        self.axes.plot(x, y, 'r')
+        self.axes.plot(xx, y, 'y')
         self.draw()
     
-    def plot_compare(self, data_before, data_after):
-        pass
+    def add_bound(self, xx, b1, b2):
+        # print(b1, b2)
+        self.axes.axvline(x = xx[b1], color='r')
+        self.axes.axvline(x = xx[b2], color='r')
+        self.draw()
+    
+    def plot_compare(self, xx, data_before, data_after):
+        self.axes.cla()
+        #print('before', data_before)
+        #print('after', data_after)
+        l1, = self.axes.plot(xx, data_before, 'b')
+        l2, = self.axes.plot(xx, data_after, 'g')
+        self.axes.legend(handles = [l1, l2], 
+                        labels = ['before', 'after'])
+        self.draw()
 
 class PlotSection(MyMplCanvas):
-    """Simple canvas with a sine plot."""
-
-    def compute_initial_figure(self):
-        t = arange(0.0, 3.0, 0.01)
-        s = cos(2*pi*t)
-        self.axes.plot(t, s)
         
-    def plot(self, data_before, data_after):
-        pass
+    def plot(self, xx, data_before, data_after):
+        self.axes.cla()
+        print('plot in section')
+        print(xx, data_before, data_after)
+        l1, = self.axes.plot(xx, data_before, 'b*')
+        l2, = self.axes.plot(xx, data_after, 'g')
+        self.axes.legend(handles = [l1, l2], 
+                        labels = ['before', 'after'])
+        self.draw()
+        
+    def clear(self):
+        self.axes.cla()
+        self.draw()
