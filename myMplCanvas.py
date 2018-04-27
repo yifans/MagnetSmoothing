@@ -16,13 +16,14 @@ from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-from numpy import arange, sin, pi, cos
-import random
+
+from scipy.interpolate import UnivariateSpline
+import numpy as np
 
 class MyMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
 
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
+    def __init__(self, parent=None, width=5, height=3, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
 
@@ -55,20 +56,31 @@ class PlotAll(MyMplCanvas):
         self.axes.cla()
         #print('before', data_before)
         #print('after', data_after)
+        changed_xx = []
+        changed_yy = []
+        for index in range(len(xx)):
+            if data_before[index] == data_after[index]:
+                continue
+            changed_xx.append(xx[index])
+            changed_yy.append(data_after[index])
+        xnew, data_after_new = myspl(xx, data_after)
         l1, = self.axes.plot(xx, data_before, 'b')
+        l2_1, = self.axes.plot(xx, data_after, 'g*')
         l2, = self.axes.plot(xx, data_after, 'g')
-        self.axes.legend(handles = [l1, l2], 
-                        labels = ['before', 'after'])
+        l3, = self.axes.plot(changed_xx, changed_yy, 'ro')
+        self.axes.legend(handles = [l1, l2, l3], 
+                        labels = ['before', 'after', 'changed points'])
         self.draw()
 
 class PlotSection(MyMplCanvas):
         
     def plot(self, xx, data_before, data_after):
         self.axes.cla()
-        print('plot in section')
-        print(xx, data_before, data_after)
+        xnew, data_after_new = myspl(xx, data_after)
+        # print('new data', data_after_new)
         l1, = self.axes.plot(xx, data_before, 'b*')
-        l2, = self.axes.plot(xx, data_after, 'g')
+        l2_1, = self.axes.plot(xx, data_after, 'g*')
+        l2, = self.axes.plot(xnew, data_after_new, 'g')
         self.axes.legend(handles = [l1, l2], 
                         labels = ['before', 'after'])
         self.draw()
@@ -76,3 +88,15 @@ class PlotSection(MyMplCanvas):
     def clear(self):
         self.axes.cla()
         self.draw()
+
+def myspl(xx, data):
+    if len(xx) < 3:
+        kk = 1
+        print('kk',kk)
+        spl = UnivariateSpline(xx, data, k = kk)
+    else:
+        spl = UnivariateSpline(xx, data)
+    xnew = np.linspace(xx.min(),xx.max(),200)
+    data_new = spl(xnew)
+    return xnew, data_new
+    

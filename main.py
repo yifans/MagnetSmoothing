@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
 
     def initUI(self):
         # 设置窗口的位置和大小
-        self.setGeometry(0, 0, 1200, 700)
+        self.setGeometry(0, 0, 1300, 700)
 
         # 设置窗口的标题
         self.setWindowTitle('Magnets Smoothing')
@@ -198,6 +198,7 @@ class MainWindow(QMainWindow):
                                     "csv file (*.csv)")
         if fname:
             smooth_data = [self.locations, self.smooth_data_x, self.smooth_data_y]
+            smooth_data = np.transpose(smooth_data)
             np.savetxt(fname, smooth_data, delimiter=',')
     
     def plot_raw(self):
